@@ -3,267 +3,275 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WonderBlox Personeelssysteem</title>
+    <title>Magister - WonderBlox Personeelsbeheer</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
     <style>
         :root {
-            --primary: #2c3e50;
-            --accent: #3498db;
+            --magister-blue: #003d7e;
+            --magister-bg: #f4f7f9;
+            --magister-sidebar: #ffffff;
+            --border-color: #d1d8e0;
+            --text-dark: #333333;
             --danger: #e74c3c;
-            --warning: #f1c40f;
-            --success: #2ecc71;
-            --light: #f4f7f6;
         }
 
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--light); margin: 0; }
-        
-        /* LOGIN SCHERM */
-        #login-container { 
-            display: flex; flex-direction: column; align-items: center; justify-content: center; 
-            height: 100vh; background: var(--primary); color: white;
-        }
-        .login-card { background: white; padding: 30px; border-radius: 12px; color: #333; width: 300px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
-        .login-card h2 { margin-top: 0; color: var(--primary); }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--magister-bg); margin: 0; display: flex; height: 100vh; color: var(--text-dark); }
 
-        /* DASHBOARD LAYOUT */
-        #dashboard { display: none; }
-        nav { width: 250px; background: var(--primary); color: white; height: 100vh; padding: 20px; position: fixed; }
-        nav h2 { border-bottom: 2px solid var(--accent); padding-bottom: 10px; font-size: 1.2em; }
-        nav ul { list-style: none; padding: 0; }
-        nav li { padding: 12px; cursor: pointer; border-radius: 5px; margin-bottom: 5px; transition: 0.2s; }
-        nav li:hover { background: var(--accent); }
+        /* Login Scherm */
+        #login-overlay { position: fixed; inset: 0; background: var(--magister-blue); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .login-box { background: white; padding: 40px; border-radius: 8px; width: 320px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); text-align: center; }
         
-        main { margin-left: 290px; padding: 40px; }
-        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 25px; }
+        /* Zijbalk */
+        nav { width: 240px; background: var(--magister-sidebar); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; }
+        .nav-logo { background: var(--magister-blue); color: white; padding: 20px; font-weight: bold; font-size: 1.2rem; }
+        nav ul { list-style: none; padding: 0; margin: 0; }
+        nav li { padding: 15px 20px; cursor: pointer; border-bottom: 1px solid var(--magister-bg); color: var(--magister-blue); font-weight: 500; }
+        nav li:hover { background: #eef2f7; }
+        nav li.active { background: #eef2f7; border-left: 4px solid var(--magister-blue); }
+
+        /* Main Content */
+        main { flex-grow: 1; padding: 30px; overflow-y: auto; }
+        h1 { color: var(--magister-blue); margin-top: 0; }
+        .card { background: white; border: 1px solid var(--border-color); border-radius: 4px; padding: 20px; margin-bottom: 20px; }
+
+        /* Zoekbalk Magister */
+        .search-container { position: relative; margin-bottom: 20px; }
+        .magister-input { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box; font-size: 1rem; }
+        .results-list { background: white; border: 1px solid var(--border-color); border-top: none; max-height: 200px; overflow-y: auto; }
+        .result-item { padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #f0f0f0; }
+        .result-item:hover { background: #f9f9f9; }
+
+        /* Detail Medewerker */
+        .profile-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--magister-blue); padding-bottom: 10px; margin-bottom: 20px; }
+        .btn { padding: 10px 16px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn-absent { background: var(--danger); color: white; margin-right: 5px; margin-bottom: 5px; }
+        .btn-blue { background: var(--magister-blue); color: white; }
         
-        /* TABELLEN */
-        table { width: 100%; border-collapse: collapse; background: white; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
-        th { background: #f8f9fa; color: var(--primary); }
+        /* Tabel Stijl */
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th { background: #f8fafc; text-align: left; padding: 12px; border-bottom: 2px solid var(--border-color); }
+        td { padding: 12px; border-bottom: 1px solid #eee; }
 
-        /* KNOPPEN & INPUTS */
-        input, select, button { width: 100%; padding: 10px; margin: 8px 0; border-radius: 5px; border: 1px solid #ddd; box-sizing: border-box; }
-        button { background: var(--accent); color: white; border: none; font-weight: bold; cursor: pointer; }
-        button.secondary { background: #95a5a6; }
-        button.danger { background: var(--danger); }
-        .admin-only { display: none; } /* Wordt getoond via JS voor directie */
-
-        .status-uitval { background: var(--danger); color: white; padding: 3px 8px; border-radius: 4px; }
         .hidden { display: none; }
+        .badge { background: #eee; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; }
     </style>
 </head>
 <body>
 
-<div id="login-container">
-    <div class="login-card">
-        <h2 id="login-title">Inloggen</h2>
-        <input type="email" id="email" placeholder="E-mailadres">
-        <input type="password" id="password" placeholder="Wachtwoord">
-        <button onclick="login()">Log In</button>
-        <button class="secondary" onclick="toggleRegister()" id="toggle-btn">Account aanmaken</button>
-        <p id="login-msg" style="color:red; font-size: 12px;"></p>
+<div id="login-overlay">
+    <div class="login-box">
+        <h2 style="color: var(--magister-blue)">Magister</h2>
+        <p>WonderBlox Inloggen</p>
+        <input type="email" id="login-email" class="magister-input" placeholder="E-mailadres" style="margin-bottom: 10px;">
+        <input type="password" id="login-pass" class="magister-input" placeholder="Wachtwoord" style="margin-bottom: 20px;">
+        <button onclick="handleLogin()" class="btn btn-blue" style="width: 100%;">Inloggen</button>
     </div>
 </div>
 
-<div id="dashboard">
-    <nav>
-        <h2>WonderBlox Beheer</h2>
-        <p id="user-display" style="font-size: 0.8em; color: var(--accent);"></p>
-        <ul>
-            <li onclick="showTab('rooster')">📅 Rooster Bekijken</li>
-            <li class="admin-only" onclick="showTab('medewerkers')">👥 Medewerkers Beheer</li>
-            <li onclick="logout()" style="margin-top: 20px; color: #ff7675;">Uitloggen</li>
-        </ul>
-    </nav>
+<nav id="sidebar" class="hidden">
+    <div class="nav-logo">WonderBlox</div>
+    <ul>
+        <li onclick="showSection('medewerkers')" id="menu-medewerkers" class="active">Personen</li>
+        <li onclick="showSection('beheer')" id="menu-beheer">Beheer</li>
+        <li onclick="logout()" style="margin-top: auto; color: var(--danger);">Uitloggen</li>
+    </ul>
+</nav>
 
-    <main>
-        <section id="tab-rooster">
-            <h1>Actueel Rooster</h1>
-            <div class="card admin-only">
-                <h3>Dienst Inplannen</h3>
-                <div style="display: flex; gap: 10px;">
-                    <select id="r-medewerker-select"></select>
-                    <input type="text" id="r-dag" placeholder="Dag">
-                    <input type="text" id="r-tijd" placeholder="Tijd">
-                    <button onclick="planDienst()">Toevoegen</button>
+<main id="content" class="hidden">
+    <section id="sec-medewerkers">
+        <h1>Medewerkers zoeken</h1>
+        <div class="search-container">
+            <input type="text" id="searchInput" class="magister-input" placeholder="Zoek medewerker (bijv. Jan)..." onkeyup="searchStaff()">
+            <div id="resultsList" class="results-list hidden"></div>
+        </div>
+
+        <div id="staffDetail" class="card hidden">
+            <div class="profile-header">
+                <div>
+                    <h2 id="det-naam" style="margin:0;">Naam</h2>
+                    <span id="det-rang" class="badge">Rang</span>
+                </div>
+                <div style="text-align: right;">
+                    <small>Begeleider:</small><br>
+                    <strong id="det-begeleider">-</strong>
                 </div>
             </div>
-            <div class="card">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Medewerker</th>
-                            <th>Dienst</th>
-                            <th>Status</th>
-                            <th>Afwezigheid</th>
-                            <th class="admin-only">Acties</th>
-                        </tr>
-                    </thead>
-                    <tbody id="rooster-body"></tbody>
-                </table>
-            </div>
-        </section>
 
-        <section id="tab-medewerkers" class="hidden">
-            <h1>Medewerkers & Rangen</h1>
-            <div class="card">
-                <h3>Nieuwe Medewerker Handmatig Toevoegen</h3>
-                <input type="text" id="m-naam" placeholder="Naam">
-                <input type="text" id="m-rang" placeholder="Rang (bijv. Begeleider, Stagiair)">
-                <input type="text" id="m-begeleider" placeholder="Toegewezen Begeleider">
-                <button onclick="adminVoegMedewerkerToe()">Opslaan</button>
+            <h3>Afwezigheid registreren</h3>
+            <div class="absent-actions">
+                <button class="btn btn-absent" onclick="logAbsence('Absent Voor vergadering')">Absent Voor vergadering</button>
+                <button class="btn btn-absent" onclick="logAbsence('Absent')">Absent</button>
+                <button class="btn btn-absent" onclick="logAbsence('Absent Tijdens Werkuur')">Absent Tijdens Werkuur</button>
+                <button class="btn btn-absent" onclick="logAbsence('Absent zonder afmelden')">Absent zonder afmelden</button>
+                <button class="btn btn-blue" onclick="customAbsence()">+ Andere reden</button>
+                <button class="btn" onclick="resetStatus()" style="background:#2ecc71; color:white;">Aanwezig melden</button>
             </div>
-            <div class="card">
-                <table id="personeel-tabel">
-                    <thead>
-                        <tr>
-                            <th>Naam</th>
-                            <th>Rang</th>
-                            <th>Begeleider</th>
-                            <th>Waarschuwingen</th>
-                            <th>Verwijderen</th>
-                        </tr>
-                    </thead>
-                    <tbody id="personeel-body"></tbody>
-                </table>
-            </div>
-        </section>
-    </main>
-</div>
+
+            <h3>Afwezigheidshistorie</h3>
+            <table>
+                <thead>
+                    <tr><th>Datum & Tijd</th><th>Status / Reden</th></tr>
+                </thead>
+                <tbody id="det-logs"></tbody>
+            </table>
+        </div>
+    </section>
+
+    <section id="sec-beheer" class="hidden">
+        <h1>Beheer & Instellingen</h1>
+        <div class="card">
+            <h3>Nieuwe medewerker aanmaken</h3>
+            <label>Volledige naam:</label>
+            <input type="text" id="add-naam" class="magister-input" placeholder="Bijv. Piet Jansen">
+            <label>Rang:</label>
+            <input type="text" id="add-rang" class="magister-input" placeholder="Bijv. Senior Begeleider">
+            <label>Begeleider:</label>
+            <input type="text" id="add-begeleider" class="magister-input" placeholder="Naam van de begeleider">
+            <button onclick="addNewStaff()" class="btn btn-blue" style="margin-top:10px;">Toevoegen aan Magister</button>
+        </div>
+    </section>
+</main>
 
 <script>
-    const ADMIN_EMAIL = "WonderBlox@Gmail.com";
-    let users = JSON.parse(localStorage.getItem('wb_users')) || [];
-    let medewerkers = JSON.parse(localStorage.getItem('wb_staff')) || [];
-    let rooster = JSON.parse(localStorage.getItem('wb_rooster')) || [];
-    let currentUser = null;
-    let isRegisterMode = false;
+    // --- FIREBASE CONFIG ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyAZ2N7lP-W9S8KeOE8Y0iTJyCdQSS-WtOw",
+        authDomain: "wonderblox-1f980.firebaseapp.com",
+        projectId: "wonderblox-1f980",
+        storageBucket: "wonderblox-1f980.firebasestorage.app",
+        messagingSenderId: "346721755105",
+        appId: "1:346721755105:web:09a70cb4fd2ab5c26c7ca0",
+        measurementId: "G-58NB24LJQY"
+    };
 
-    // --- AUTH SYSTEEM ---
-    function toggleRegister() {
-        isRegisterMode = !isRegisterMode;
-        document.getElementById('login-title').innerText = isRegisterMode ? "Registreren" : "Inloggen";
-        document.getElementById('toggle-btn').innerText = isRegisterMode ? "Naar Inloggen" : "Account aanmaken";
-    }
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
 
-    function login() {
-        const email = document.getElementById('email').value;
-        const pass = document.getElementById('password').value;
+    let currentStaffId = null;
 
-        if(isRegisterMode) {
-            if(users.find(u => u.email === email)) return alert("Email bestaat al");
-            users.push({email, pass});
-            localStorage.setItem('wb_users', JSON.stringify(users));
-            alert("Account aangemaakt! Je kunt nu inloggen.");
-            toggleRegister();
+    // --- AUTH ---
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            document.getElementById('login-overlay').classList.add('hidden');
+            document.getElementById('sidebar').classList.remove('hidden');
+            document.getElementById('content').classList.remove('hidden');
         } else {
-            const user = users.find(u => u.email === email && u.pass === pass) || (email === ADMIN_EMAIL && pass === "admin123" ? {email} : null);
-            if(email === ADMIN_EMAIL && pass === "") return alert("Vul een wachtwoord in voor de directie.");
-            
-            if(user || email === ADMIN_EMAIL) {
-                currentUser = email;
-                document.getElementById('login-container').style.display = 'none';
-                document.getElementById('dashboard').style.display = 'block';
-                document.getElementById('user-display').innerText = `Ingelogd als: ${currentUser}`;
-                
-                if(currentUser === ADMIN_EMAIL) {
-                    document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
-                }
-                render();
-            } else {
-                alert("Foutieve gegevens");
-            }
+            document.getElementById('login-overlay').classList.remove('hidden');
+            document.getElementById('sidebar').classList.add('hidden');
+            document.getElementById('content').classList.add('hidden');
         }
+    });
+
+    async function handleLogin() {
+        const email = document.getElementById('login-email').value;
+        const pass = document.getElementById('login-pass').value;
+        try {
+            await auth.signInWithEmailAndPassword(email, pass);
+        } catch (e) { alert("Inloggen mislukt: " + e.message); }
     }
 
-    function logout() { location.reload(); }
+    function logout() { auth.signOut(); }
 
     // --- FUNCTIES ---
-    function showTab(tab) {
-        document.getElementById('tab-rooster').classList.add('hidden');
-        document.getElementById('tab-medewerkers').classList.add('hidden');
-        document.getElementById('tab-' + tab).classList.remove('hidden');
+    async function addNewStaff() {
+        const naam = document.getElementById('add-naam').value;
+        const rang = document.getElementById('add-rang').value;
+        const begeleider = document.getElementById('add-begeleider').value;
+
+        if(!naam || !rang) return alert("Vul alle velden in");
+
+        await db.collection("staff").add({
+            naam, rang, begeleider,
+            logs: []
+        });
+        alert("Medewerker succesvol toegevoegd aan WonderBlox!");
+        document.getElementById('add-naam').value = '';
+        showSection('medewerkers');
     }
 
-    function adminVoegMedewerkerToe() {
-        const naam = document.getElementById('m-naam').value;
-        const rang = document.getElementById('m-rang').value;
-        const begeleider = document.getElementById('m-begeleider').value;
-        if(!naam) return;
-        medewerkers.push({ id: Date.now(), naam, rang, begeleider, waarschuwingen: 0, afwezigheden: [] });
-        save();
+    async function searchStaff() {
+        const q = document.getElementById('searchInput').value.toLowerCase();
+        const resultsDiv = document.getElementById('resultsList');
+        
+        if(q.length < 1) {
+            resultsDiv.classList.add('hidden');
+            return;
+        }
+
+        const snapshot = await db.collection("staff").get();
+        let html = "";
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            if(data.naam.toLowerCase().includes(q)) {
+                html += `<div class="result-item" onclick="viewStaff('${doc.id}')">${data.naam} <small>(${data.rang})</small></div>`;
+            }
+        });
+        
+        resultsDiv.innerHTML = html;
+        resultsDiv.classList.remove('hidden');
     }
 
-    function planDienst() {
-        const mId = document.getElementById('r-medewerker-select').value;
-        const tijd = `${document.getElementById('r-dag').value} om ${document.getElementById('r-tijd').value}`;
-        if(!mId) return;
-        rooster.push({ id: Date.now(), mId: parseInt(mId), tijd, status: 'Actief' });
-        save();
+    async function viewStaff(id) {
+        currentStaffId = id;
+        document.getElementById('resultsList').classList.add('hidden');
+        document.getElementById('searchInput').value = "";
+        
+        const doc = await db.collection("staff").doc(id).get();
+        const data = doc.data();
+
+        document.getElementById('det-naam').innerText = data.naam;
+        document.getElementById('det-rang').innerText = data.rang;
+        document.getElementById('det-begeleider').innerText = data.begeleider || "Geen";
+        
+        const logHtml = (data.logs || []).reverse().map(log => `
+            <tr>
+                <td>${log.datum}</td>
+                <td><strong>${log.type}</strong></td>
+            </tr>
+        `).join('');
+        
+        document.getElementById('det-logs').innerHTML = logHtml || "<tr><td colspan='2'>Geen afwezigheid bekend.</td></tr>";
+        document.getElementById('staffDetail').classList.remove('hidden');
     }
 
-    function updateAfwezigheid(mId, type) {
-        const m = medewerkers.find(x => x.id === mId);
-        let reden = type;
-        if(type === 'custom') reden = prompt("Andere reden (bijv. Absent Geoorloofd):");
-        if(reden) {
-            m.afwezigheden.push(reden);
-            save();
+    async function logAbsence(type) {
+        if(!currentStaffId) return;
+        const timestamp = new Date().toLocaleString('nl-NL');
+        
+        await db.collection("staff").doc(currentStaffId).update({
+            logs: firebase.firestore.FieldValue.arrayUnion({ datum: timestamp, type: type })
+        });
+        
+        viewStaff(currentStaffId);
+        alert("Status opgeslagen: " + type);
+    }
+
+    function customAbsence() {
+        const reden = prompt("Voer de reden van afwezigheid in (bijv. Absent Geoorloofd):");
+        if(reden) logAbsence(reden);
+    }
+
+    async function resetStatus() {
+        if(confirm("Weet je zeker dat je deze persoon weer op aanwezig wilt zetten?")) {
+            logAbsence("Aanwezig gemeld (Einde absentie)");
         }
     }
 
-    function save() {
-        localStorage.setItem('wb_staff', JSON.stringify(medewerkers));
-        localStorage.setItem('wb_rooster', JSON.stringify(rooster));
-        render();
-    }
-
-    function render() {
-        // Medewerkers lijst
-        const pBody = document.getElementById('personeel-body');
-        const rSelect = document.getElementById('r-medewerker-select');
-        pBody.innerHTML = '';
-        rSelect.innerHTML = '';
+    function showSection(id) {
+        document.getElementById('sec-medewerkers').classList.add('hidden');
+        document.getElementById('sec-beheer').classList.add('hidden');
+        document.getElementById('menu-medewerkers').classList.remove('active');
+        document.getElementById('menu-beheer').classList.remove('active');
         
-        medewerkers.forEach(m => {
-            pBody.innerHTML += `<tr>
-                <td>${m.naam}</td>
-                <td><b>${m.rang}</b></td>
-                <td>${m.begeleider}</td>
-                <td>${m.waarschuwingen} <button style="width:auto" onclick="medewerkers.find(x=>x.id==${m.id}).waarschuwingen++; save()">+</button></td>
-                <td><button class="danger" onclick="medewerkers=medewerkers.filter(x=>x.id!=${m.id}); save()">X</button></td>
-            </tr>`;
-            rSelect.innerHTML += `<option value="${m.id}">${m.naam}</option>`;
-        });
-
-        // Rooster
-        const rBody = document.getElementById('rooster-body');
-        rBody.innerHTML = '';
-        rooster.forEach(r => {
-            const m = medewerkers.find(x => x.id === r.mId);
-            if(!m) return;
-            const isAdmin = currentUser === ADMIN_EMAIL;
-            rBody.innerHTML += `<tr>
-                <td>${m.naam}</td>
-                <td>${r.tijd}</td>
-                <td><span class="${r.status === 'UITVAL' ? 'status-uitval' : ''}">${r.status}</span></td>
-                <td>
-                    <select onchange="updateAfwezigheid(${m.id}, this.value); this.value=''">
-                        <option value="">Status...</option>
-                        <option value="Absent Voor vergadering">Absent Voor vergadering</option>
-                        <option value="Absent">Absent</option>
-                        <option value="Absent Tijdens Werkuur">Absent Tijdens Werkuur</option>
-                        <option value="Absent zonder afmelden">Absent zonder afmelden</option>
-                        <option value="custom">+ Zelf toevoegen</option>
-                    </select>
-                    <div style="font-size:10px">${m.afwezigheden.slice(-1)}</div>
-                </td>
-                <td class="${isAdmin ? '' : 'hidden'}">
-                    <button onclick="rooster.find(x=>x.id==${r.id}).status='GEWISSELD'; save()">Wissel</button>
-                    <button class="danger" onclick="rooster.find(x=>x.id==${r.id}).status='UITVAL'; save()">Uitval</button>
-                </td>
-            </tr>`;
-        });
+        document.getElementById('sec-' + id).classList.remove('hidden');
+        document.getElementById('menu-' + id).classList.add('active');
     }
 </script>
+
 </body>
 </html>
